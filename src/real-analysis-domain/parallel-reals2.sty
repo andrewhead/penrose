@@ -8,16 +8,34 @@ origin {
 }
 
 Colors {
-  Colors.black = rgba(0.0, 0.0, 0.0, 1.0)
-  Colors.gray = rgba(0.8, 0.8, 0.8, 1.0)
-  Colors.red = rgba(1.0, 0.0, 0.0, 1.0)
-  Colors.green = rgba(0.0, 1.0, 0.0, 0.5)
-  Colors.blue = rgba(0.0, 0.0, 1.0, 0.5)
+    Colors.black = rgba(0.0, 0.0, 0.0, 1.0)
+    Colors.gray = rgba(0.8, 0.8, 0.8, 1.0)
+    Colors.red = rgba(1.0, 0.0, 0.0, 1.0)
+    Colors.pink = rgba(1.0, 0.4, 0.7, 1.0)
+    Colors.yellow = rgba(1.0, 1.0, 0.0, 1.0)
+    Colors.orange = rgba(1.0, 0.6, 0.0, 1.0)
+    Colors.lightorange = rgba(1.0, 0.6, 0.0, 0.25)
+    Colors.green = rgba(0.0, 1.0, 0.0, 1.0)
+    Colors.blue = rgba(0.0, 0.0, 1.0, 1.0)
+    Colors.sky = rgba(0.325, 0.718, 0.769, 1.0)
+    Colors.lightsky = rgba(0.325, 0.718, 0.769, 0.25)
+    Colors.lightblue = rgba(0.0, 0.0, 1.0, 0.25)
+    Colors.cyan = rgba(0.0, 1.0, 1.0, 1.0)
+    Colors.purple = rgba(0.5, 0.0, 0.5, 1.0)
+    Colors.white = rgba(1.0, 1.0, 1.0, 1.0)
+    Colors.none = rgba(0.0, 0.0, 0.0, 0.0)
+    Colors.lightblue2 = rgba(0.82, 0.88, 0.94, 1.0)
+    Colors.lightpink = rgba(0.9, 0.5, 0.5, 0.25)
 }
+
+-- Should there be a style for generic Interval
+-- without a Subset relationship?
+-- It would specify the fields that the subtypes
+-- would need to have, like left, right, yval, shape
 
 Reals `R` {
   R.len = 500.0
-  R.thickness = 5.0
+  R.thickness = 1.5
   R.color = Colors.gray
 
   R.left = origin.x
@@ -45,13 +63,14 @@ Reals `R` {
 Real r  -- no "In(r, `R`)"
 with Reals `R` {
   r.val = OPTIMIZED
+  r.yval = `R`.yval
   r.len = 20.0
 
   r.shape = Line {
     startX = r.val
-    startY = `R`.yval - (r.len / 2.0)
+    startY = r.yval - (r.len / 2.0)
     endX = r.val
-    endY = `R`.yval + (r.len / 2.0)
+    endY = r.yval + (r.len / 2.0)
     thickness = 2.5
     color = Colors.black
   }
@@ -65,7 +84,12 @@ with Reals `R` {
   r.labelFn = encourage nearHead(r.shape, r.text, 10.0, 10.0)
 }
 
-Interval I where Subset(I, R) with Reals R { -- TODO: more general, with Interval J
+----------------------------------
+-- INTERVAL STYLES
+
+Interval I
+where Subset(I, R)
+with Reals R { -- TODO: more general, with Interval J
   I.left = OPTIMIZED
   I.right = OPTIMIZED
   I.yval = R.yval
@@ -75,7 +99,8 @@ Interval I where Subset(I, R) with Reals R { -- TODO: more general, with Interva
     startY = I.yval
     endX = I.right
     endY = I.yval
-    thickness = 10.0
+    thickness = 7.5
+    color = rgba(0.3, 0.3, 0.9, 0.5)
   }
 
   -- position computed, not optimized
@@ -100,57 +125,117 @@ with Interval I; Reals R
 where I := CreateInterval(a, b); Subset(I, R) {
   override a.val = I.left
   override b.val = I.right
+  override a.yval = I.yval
+  override b.yval = I.yval
 }
 
 Real r
-with Interval I; Reals R
+with Interval I; Reals R; Real a; Real b
 where I := CreateInterval(a, b); In(r, I); Subset(I, R) {
+  override r.yval = I.yval
   override r.inFn = ensure inRange(r.val, a.val, b.val)
   override r.shape.color = Colors.red
 }
 
--- f : I -> R
--- If there is any function from I to R, then we make a
--- second real number line that those functions all share.
--- (This is going to be done for every match, hence the
--- `override` / lack of `override` warnings.)
--- Will achieve the effect of if only one shape had been made
+Real a; Real b
+with OpenInterval I; Reals R
+where I := CreateOpenInterval(a, b); Subset(I, R) {
+  -- lines copied from real-analysis-types.sty
+  override a.shape = Image {
+      path = "left-paren.svg"
+      centerX = a.val
+      centerY = a.yval
+      lengthX = 10.0
+      lengthY = 20.0
+  }
 
-Function f; Reals R
-with Interval I
-where f := CreateFunction(I, R) {
-  R.yval2 = R.yval - 100.0 -- function drawn downward
+  override b.shape = Image {
+      path = "right-paren.svg"
+      centerX = b.val
+      centerY = b.yval
+      lengthX = 10.0
+      lengthY = 20.0
+  }
 
-  R.shape2 = Arrow {
-    startX = R.left
-    startY = R.yval2
-    endX = R.right
-    endY = R.yval2
-    thickness = R.thickness
-    color = R.color
+    override a.labelFn = encourage near(a.shape, a.text, 0.0, -20.0)
+    override b.labelFn = encourage near(b.shape, b.text, 0.0, -20.0)
+}
+
+Real a; Real b
+with ClosedInterval I; Reals R
+where I := CreateClosedInterval(a, b); Subset(I, R) {
+  -- lines copied from real-analysis-types.sty
+  override a.shape = Image {
+      path = "left-bracket.svg"
+      centerX = a.val
+      centerY = a.yval
+      lengthX = 10.0
+      lengthY = 20.0
+  }
+
+  override b.shape = Image {
+      path = "right-bracket.svg"
+      centerX = b.val
+      centerY = b.yval
+      lengthX = 10.0
+      lengthY = 20.0
+  }
+
+    override a.labelFn = encourage near(a.shape, a.text, 0.0, -20.0)
+    override b.labelFn = encourage near(b.shape, b.text, 0.0, -20.0)
+}
+
+----------------------------------
+-- FUNCTION STYLES
+
+/* The selectors for drawing a single function
+cascade by first drawing a generic function between two *different* intervals (where Real is a subtype of Interval), drawing a new Real line and setting the relevant pointers. The selectors after it deal with the following specific cases:
+
+- if f : R -> R, set f's domain and codomain accordingly
+- if f : (R or I) -> J (where J is an interval that's a subset of R), move J onto the second real number line
+- if f : I -> R, f's codomain needs to be the second real number line, otherwise f will be drawn to map onto the first real number line (which is a valid visualization style, just confusing to see)
+
+We currently do not draw f : I -> I. */
+
+/* f : I -> J
+ If there is any function from I to J, then we make a second real number line that those functions all share. (This is going to be done for every match, hence the `override` / lack of `override` warnings.) This will achieve the effect of if only one shape had been made. 
+
+TODO: Doesn't match f : R -> R right now but will match if we add a "could equal" for I ?= J */
+
+Function f
+with Interval I; Interval J; Reals `R`
+-- Does NOT match with generic "Reals R"!
+where f := CreateFunction(I, J) {
+  `R`.yval2 = `R`.yval - 100.0 -- function drawn downward
+
+  `R`.shape2 = Arrow {
+    startX = `R`.left
+    startY = `R`.yval2
+    endX = `R`.right
+    endY = `R`.yval2
+    thickness = `R`.thickness
+    color = `R`.color
     rotation = 0.0
   }
 
- R.shape2_text = Text {
-    string = R.label
+ `R`.shape2_text = Text {
+    string = `R`.label
     rotation = 0.0
   }
 
-  R.shape2_labelFn = ensure nearHead(R.shape2, R.shape2_text, global.padding, global.padding)
+  `R`.shape2_labelFn = ensure nearHead(`R`.shape2, `R`.shape2_text, global.padding, global.padding)
 
   -------------------------------------------------
-  -- draw f as an arrow from interval to reals
-  f.val = OPTIMIZED   -- placeholder, TODO sample f's value
-  f.domain = I.shape
-  f.codomain = R.shape2
 
-  f.shape = Arrow {
-    startX = midpointX(f.domain)
-    startY = I.yval - global.padding
-    endX   = midpointX(f.codomain)
-    endY   = R.yval2 + global.padding
-    thickness = R.thickness * 2.0
-    -- color = Colors.blue
+  f.val = OPTIMIZED   -- placeholder, TODO sample f's value
+  f.domain = I.shape -- TODO: we really want to be able to write `f.domain = I` but it doesn't even parse
+  f.codomain = J.shape
+
+  f.shape = Curve {
+    pathData = sampleFunctionArea(f.domain, f.codomain, 5.0, 30.0)
+    strokeWidth = 0.0
+    fill = Colors.lightpink
+    color = Colors.lightpink
     rotation = 0.0
   }
 
@@ -159,13 +244,88 @@ where f := CreateFunction(I, R) {
     rotation = 0.0
   }
 
-  f.labelFn = encourage centerLabel(f.shape, f.text)
+  f.text.x = average(midpointX(f.domain), midpointX(f.codomain)) + 10.0
+  f.text.y = average(f.domain.startY, f.codomain.startY)
 }
 
--- h = g . f
--- If there is a composition of functions, draw a third R for the second function
-  -- again, this is technically going to be made for every match, but overridden to be the same thing
--- (Does NOT deal with composition of 3 functions, i = h.g.f)
+-- This is simply copy-pasted from the previous selector except for f.domain and f.codomain
+-- Not sure how to make it more generic, since we do want to do something special for f : I -> I
+
+Function f
+with Reals `R`
+where f := CreateFunction(`R`, `R`) {
+  `R`.yval2 = `R`.yval - 100.0 -- function drawn downward
+
+  `R`.shape2 = Arrow {
+    startX = `R`.left
+    startY = `R`.yval2
+    endX = `R`.right
+    endY = `R`.yval2
+    thickness = `R`.thickness
+    color = `R`.color
+    rotation = 0.0
+  }
+
+ `R`.shape2_text = Text {
+    string = `R`.label
+    rotation = 0.0
+  }
+
+  `R`.shape2_labelFn = ensure nearHead(`R`.shape2, `R`.shape2_text, global.padding, global.padding)
+
+  -------------------------------------------------
+
+  f.val = OPTIMIZED
+  f.domain = `R`.shape
+  f.codomain = `R`.shape2
+
+  f.shape = Curve {
+    pathData = sampleFunctionArea(f.domain, f.codomain, 5.0, 30.0)
+    strokeWidth = 0.0
+    fill = Colors.lightpink
+    color = Colors.lightpink
+    rotation = 0.0
+  }
+
+  f.text = Text {
+    string = f.label
+    rotation = 0.0
+  }
+
+  f.text.x = average(midpointX(f.domain), midpointX(f.codomain)) + 10.0
+  f.text.y = average(f.domain.startY, f.codomain.startY)
+}
+
+/* We have no style for f : I -> I where I is a generic interval in R.  Hard to visualize with the "mass" function. ut we could easily draw a loopy arrow. */
+
+Function f
+with Interval I; Interval J; Reals `R`
+where f := CreateFunction(I, J);
+      Subset(J, `R`) { -- i.e. J is not of type Reals
+
+  override J.yval = `R`.yval2
+  -- avoid cycles if I=R in generic (I,J) selector
+}
+
+Function f
+with Interval I; Reals R
+where f := CreateFunction(I, R) {
+
+  override f.codomain = R.shape2
+  -- specifically draw from the current R to new R
+  -- otherwise, will show it from R to itself
+  -- (which is also a valid viz)
+}
+
+/*
+Function `g` {
+	 override `g`.shape.fill = Colors.lightsky
+	 override `g`.shape.color = Colors.lightsky
+} */
+
+/* h = g . f
+
+If there is a composition of functions, draw a third R for the second function. Again, this is technically going to be made for every match, but overridden to be the same thing. (Does NOT deal with composition of 3 functions, i = h . g . f) */
 
 Function h;
 Function g;
@@ -173,7 +333,7 @@ Function f
 where h := compose(g, f);
       h := CreateFunction(A, R);
       g := CreateFunction(B, R);
-      f := CreateFunction(A, R)
+      f := CreateFunction(A, B)
       -- disallow equality for simplicity
       -- TODO: deal with these later
       -- A ?= B; B ?= C; h ?= g; g ?= f
@@ -226,3 +386,39 @@ with Interval A, B;
 
 -- TODO: selectors to make fourth, fifth, etc. R
 -- specifically for the composition of three, four functions
+
+----------------------------------
+-- FUNCTION APPLICATION STYLES
+
+-- y := f(x)
+Real y; Function f
+with Interval I; Interval J; Real x; Reals R
+where y := apply(f, x); f := CreateFunction(I, J); In(x, I) {
+
+  -- so it's not necessary to say In(y, J)
+  override y.yval = J.yval
+
+  f.pointwise_shape = Curve {
+    -- TODO: syntax for working with 2-tuples and lists
+    -- TODO: why does this not interpolate properly with offset = (0, 0)?
+    -- TODO: more curves = more time to optimize?
+    pathData = makeCurve(x.val, I.yval - 2.0 * global.padding, y.val, J.yval + 2.0 * global.padding, -10.0, -(J.yval - I.yval) / 1.5)
+    strokeWidth = 2.0
+    fill = Colors.none
+    color = Colors.sky
+    rotation = 0.0
+    -- TODO: rename to account for arrow directionality
+    right-arrowhead = True
+  }
+
+/* f.pointwise_shape = Arrow {
+    startX = x.val
+    startY = I.yval - global.padding
+    endX   = y.val
+    endY   = J.yval + global.padding
+    thickness = R.thickness
+    color = f.shape.color
+    rotation = 0.0
+  } */
+
+}

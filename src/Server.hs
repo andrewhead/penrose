@@ -31,9 +31,10 @@ import qualified Network.WebSockets            as WS
 import           Network.WebSockets.Connection
 import qualified Network.WebSockets.Stream     as Stream
 import qualified Optimizer                     as O
-import           Shapes                        (Shape, Value (..), getName,
-                                                getX, getY, sampleShapes, setX,
-                                                setY, toPolymorphics)
+import           Shapes
+-- (Shape, Value (..), getName,
+--                                                 getNum, getX, getY, sampleShapes, setX,
+--                                                 setY, toPolymorphics, set, is)
 import qualified Style                         as N
 import           Substance                     (parseSubstance)
 import           System.Console.Pretty         (Color (..), Style (..), bgColor,
@@ -352,7 +353,7 @@ dragUpdate name xm ym client@(clientID, conn, clientState) =
     let (xm', ym') = (r2f xm, r2f ym)
         newShapes  = map (\shape ->
             if getName shape == name
-                then setX (FloatV (xm' + getX shape)) $ setY (FloatV (ym' + getY shape)) shape
+                then dragShape shape xm' ym'
                 else shape)
             (G.shapesr s)
         varyMapNew = G.mkVaryMap (G.varyingPaths s) (G.varyingState s)
@@ -365,6 +366,26 @@ dragUpdate name xm ym client@(clientID, conn, clientState) =
         then stepAndSend client'
         else loop client'
     where s = getBackendState clientState
+
+dragShape :: Autofloat a => Shape a -> a -> a -> Shape a
+dragShape shape dx dy
+    | shape `is` "Line" =
+        trRaw "here"  $ move "startX" dx $
+        move "startY" dy $
+        move "endX"   dx $
+        move "endY"   dy shape
+    | shape `is` "Image" =
+        move "centerX" dx $
+        move "centerY" dy shape
+    | shape `is` "Arrow" =
+        move "startX" dx $
+        move "startY" dy $
+        move "endX"   dx $
+        move "endY"   dy shape
+    | otherwise = setX (FloatV (dx + getX shape)) $ setY (FloatV (dy + getY shape)) shape
+
+move :: Autofloat a => PropID -> a -> Shape a -> Shape a
+move prop dd s = set s prop (FloatV (dd + getNum s prop))
 
 executeCommand :: String -> Client -> IO ()
 executeCommand cmd client@(clientID, conn, clientState)
@@ -390,8 +411,11 @@ resampleAndSend client@(clientID, conn, clientState) = do
                     G.transr = trans',
                     G.varyingState = G.shapes2floats resampledShapes varyMapNew $ G.varyingPaths s,
                     G.paramsr = (G.paramsr s) { G.weight = G.initWeight, G.optStatus = G.NewIter } }
-    wsSendFrame conn Frame { flag = "initial",
-                            shapes = fst $ evalTranslation news :: [Shape Double] }
+    -- NOTE: for now we do not update the new state with the new rng from eval.
+    -- The results still look different because resampling updated the rng.
+    -- Therefore, we do not have to update rng here.
+    let (newShapes, _, _) = evalTranslation news
+    wsSendJSONFrame conn Frame { flag = "initial", shapes = newShapes }
     let nextClientS = updateState clientState news
     let client' = (clientID, conn, nextClientS)
     -- NOTE: could have called `loop` here, but this would result in a race condition between autostep and updateShapes somehow. Therefore, we explicitly transition to waiting for an update on label sizes whenever resampled.

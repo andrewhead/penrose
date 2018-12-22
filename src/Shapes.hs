@@ -25,27 +25,27 @@ import qualified Data.Map.Strict as M
 --------------------------------------------------------------------------------
 -- Types
 
--- | shape can have multiple pieces, e.g. multiple “M”s
+-- | shape can have multiple pieces, e.g. multiple "M"s
 type PathData a = [Path' a]
 
 -- | TODO
 -- NOTE: the order of the elements is important
 data Path' a
-    = Closed [Elem a] -- ^  “Z”
-    | Open [Elem a]   -- ^  no “Z”
+    = Closed [Elem a] -- ^  "Z"
+    | Open [Elem a]   -- ^  no "Z"
     deriving (Generic, Eq, Show)
 instance (FromJSON a) => FromJSON (Path' a)
 instance (ToJSON a)   => ToJSON (Path' a)
 
 -- | TODO
 data Elem a
-    = Pt (Pt2 a)                   -- ^ Replace “M,” “L”, “H”, “V”
-    | CubicBez (Pt2 a, Pt2 a, Pt2 a) -- ^ “C”: two control pts, 1 endpt
-    | CubicBezJoin (Pt2 a, Pt2 a)  -- ^ “S”: 1 control pt, 1 endpt
-    | QuadBez (Pt2 a, Pt2 a)       -- ^ “Q”: 1 control pt, 1 endpt
-    | QuadBezJoin (Pt2 a)          -- ^ “T”: 1 endpt
+    = Pt (Pt2 a)                   -- ^ Replace "M," "L", "H", "V"
+    | CubicBez (Pt2 a, Pt2 a, Pt2 a) -- ^ "C": two control pts, 1 endpt
+    | CubicBezJoin (Pt2 a, Pt2 a)  -- ^ "S": 1 control pt, 1 endpt
+    | QuadBez (Pt2 a, Pt2 a)       -- ^ "Q": 1 control pt, 1 endpt
+    | QuadBezJoin (Pt2 a)          -- ^ "T": 1 endpt
     deriving (Generic, Eq, Show)
-    -- | Arc { x, y, sweep1, … }  -- “A” TODO
+    -- | Arc { x, y, sweep1, … }  -- "A" TODO
 instance (FromJSON a) => FromJSON (Elem a)
 instance (ToJSON a)   => ToJSON (Elem a)
 
@@ -570,6 +570,16 @@ getPoint "end" shape = case (shape .: "endX", shape .: "endY") of
    (FloatV x, FloatV y) -> (x, y)
    _ -> error "getPoint expected two floats but got something else"
 getPoint _ shape = error "getPoint did not receive existing property name"
+
+-- To use with vector operations
+getPointV :: (Autofloat a) => String -> Shape a -> [a]
+getPointV "start" shape = case (shape .: "startX", shape .: "startY") of
+   (FloatV x, FloatV y) -> [x, y]
+   _ -> error "getPointV expected two floats but got something else"
+getPointV "end" shape = case (shape .: "endX", shape .: "endY") of
+   (FloatV x, FloatV y) -> [x, y]
+   _ -> error "getPointV expected two floats but got something else"
+getPointV _ shape = error "getPointV did not receive existing property name"
 
 getName :: (Autofloat a) => Shape a -> String
 getName shape = case shape .: "name" of
